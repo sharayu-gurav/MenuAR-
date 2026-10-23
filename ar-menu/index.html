@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Table Preview – AR menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+:root{--bg:#0d1411;--ink:#f1e9d6;--mute:#9aa59b;--gold:#c9a45c;--card:#16201b;--line:#2a372f}
+*{box-sizing:border-box}
+body{margin:auto;background:radial-gradient(120% 60% at 50% 0,#17241d,#0d1411 60%) fixed;color:var(--ink);font:16px/1.55 'DM Sans',system-ui,sans-serif;max-width:520px;min-height:100vh}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:400;margin:0;line-height:1.15}
+header{padding:34px 22px 14px}header h1{font-size:34px;letter-spacing:.2px}header p{margin:8px 0 14px;color:var(--mute);font-size:15px}
+.acts{display:flex;gap:10px}button{font:inherit;cursor:pointer}
+.ghost{border:1px solid var(--gold);background:none;border-radius:999px;padding:8px 16px;color:var(--gold)}
+.ghost.fill{background:var(--gold);color:#17120a;font-weight:500}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 16px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;text-align:left;padding:0;color:inherit}
+.card model-viewer{width:100%;height:160px;pointer-events:none;background:radial-gradient(circle at 50% 40%,#2a3a31,#16201b 75%);--poster-color:transparent}
+.card div{padding:10px 14px 14px}.card h3{font-size:18px}.card small{color:var(--gold);font-size:13px}
+.back{margin:16px 18px 0;border:0;background:none;color:var(--gold);font-weight:500;padding:4px 0}
+.hero{position:relative}
+.hero model-viewer{width:100%;height:48vh;min-height:320px;background:radial-gradient(circle at 50% 45%,#2d3f34,#0d1411 78%);--poster-color:transparent}
+.rot{position:absolute;top:12px;right:14px;display:flex;gap:8px}.rot button{background:#0d1411cc;border:1px solid var(--gold);color:var(--gold);border-radius:999px;padding:6px 13px;font-size:14px}.rot button.on{background:var(--gold);color:#17120a}.hint{position:absolute;left:0;right:0;bottom:70px;text-align:center;font-size:12px;color:var(--mute);margin:0;pointer-events:none}
+.ar{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--gold);color:#17120a;border:0;border-radius:999px;padding:13px 26px;font-weight:500;box-shadow:0 8px 24px #c9a45c44}
+.info{padding:14px 22px 48px}.info h2{font-size:32px}.info>p{color:var(--mute)}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.stats span{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font-size:14px}
+h4{margin:22px 0 8px;font:600 13px 'DM Sans';color:var(--gold);letter-spacing:.6px}ul{margin:0;padding-left:20px}li{margin:2px 0}
+.spice{display:flex;gap:6px;align-items:center}.dot{width:13px;height:13px;border-radius:50%;background:var(--line)}.dot.on{background:#e0613a}
+.note,.msg{font-size:13px;color:var(--mute)}.note{margin-top:20px}.msg{text-align:center;margin-top:8px}
+dialog{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:22px;padding:24px;text-align:center;max-width:320px;width:90%}
+dialog::backdrop{background:#000c}#qr{display:flex;justify-content:center;margin:14px 0}#qr img,#qr canvas,.cq img{background:#fff;padding:8px;border-radius:12px}
+#sv{width:100%;aspect-ratio:1;object-fit:cover;border-radius:16px;background:#000;margin:12px 0 4px}
+</style></head>
+<body><div id="app"></div>
+<dialog id="dlg"><h3 id="qrt">Scan to open</h3><div id="qr"></div><p class="msg" id="qrurl"></p><button class="ghost" onclick="dlg.close()">Close</button></dialog>
+<dialog id="sdlg"><h3>Scan a dish QR</h3><video id="sv" playsinline muted></video><p class="msg" id="smsg"></p><button class="ghost" onclick="stopScan()">Cancel</button></dialog>
+<script>
+// ---- EDIT YOUR MENU HERE: add a dish by adding an object + a .glb in /models ----
+const DISHES=[
+{id:'salmon',name:'Salmon Masala',tag:'Creamy curry · Indian',spice:2,portion:'Serves 1 · ~350 g',kcal:539,time:'30 min',
+ desc:'Salmon fillet simmered in a creamy tomato-and-spice sauce, served in a small pan with lemon.',
+ ing:['Salmon fillet','Tomato','Cream','Onion, garlic, ginger','Garam masala, turmeric, chilli','Lemon'],prep:'Pan-simmered in sauce',allergens:['Fish','Milk']},
+{id:'butter-chicken',name:'Butter Chicken',tag:'Mild curry · Indian',spice:1,portion:'Serves 1 · ~380 g',kcal:610,time:'25 min',
+ desc:'Tandoor-roasted chicken pieces in a smooth, buttery tomato sauce. Sweet, rich, and mild.',
+ ing:['Chicken','Butter','Tomato','Cream','Fenugreek leaves','Mild spices'],prep:'Marinated, roasted, then simmered',allergens:['Milk']},
+{id:'palak-paneer',name:'Palak Paneer',tag:'Vegetarian · Indian',spice:1,portion:'Serves 1 · ~350 g',kcal:430,time:'20 min',
+ desc:'Soft cubes of fresh cheese (paneer) in a puréed spinach gravy with garlic and cumin.',
+ ing:['Paneer (fresh cheese)','Spinach','Onion, garlic','Cumin','Cream'],prep:'Spinach blanched and puréed',allergens:['Milk']},
+{id:'ramen',name:'Tonkotsu Ramen',tag:'Noodle soup · Japanese',spice:0,portion:'Large bowl · ~550 ml',kcal:720,time:'15 min',
+ desc:'Wheat noodles in a rich pork-bone broth, topped with sliced pork, a soft-boiled egg and spring onion.',
+ ing:['Wheat noodles','Pork bone broth','Chashu (braised pork)','Marinated egg','Spring onion'],prep:'Broth simmered 12 h; assembled to order',allergens:['Gluten','Egg','Soy']},
+{id:'nigiri',name:'Nigiri Selection',tag:'Raw fish · Japanese',spice:0,portion:'4 pieces · ~120 g',kcal:260,time:'10 min',
+ desc:'Four hand-pressed pieces: fish or egg on seasoned rice. Eat in one bite; dip fish side in soy.',
+ ing:['Sushi rice','Salmon','Tuna','Egg omelette','Prawn','Wasabi'],prep:'Raw fish; hand-pressed',allergens:['Fish','Shellfish','Egg','Soy']}];
+const $=s=>document.querySelector(s),app=$('#app');
+const base=()=>location.origin+location.pathname,link=id=>base()+'#'+id;
+const MV='environment-image="neutral" exposure="1.2" shadow-intensity="1.4" shadow-softness="1" tone-mapping="commerce"';
+function menu(){
+ app.innerHTML=`<header><h1>Table Preview</h1><p>See every dish at full size before you order.</p><div class="acts"><button class="ghost fill" onclick="scan()">Scan dish QR</button></div></header>
+ <div class="grid">${DISHES.map(d=>`<button class="card" onclick="location.hash='${d.id}'"><model-viewer src="models/${d.id}.glb" camera-orbit="30deg 62deg 0.5m" auto-rotate rotation-per-second="18deg" interaction-prompt="none" ${MV} disable-zoom></model-viewer><div><h3>${d.name}</h3><small>${d.tag}</small></div></button>`).join('')}</div>`;
+}
+function detail(d){
+ const sp=['Not spicy','Mild','Medium','Hot'][d.spice];
+ app.innerHTML=`<button class="back" onclick="location.hash=''">‹ Menu</button>
+ <div class="hero"><model-viewer id="mv" src="models/${d.id}.glb" alt="3D model of ${d.name}" camera-controls touch-action="none" auto-rotate auto-rotate-delay="0" rotation-per-second="25deg" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" camera-orbit="25deg 58deg 0.55m" min-camera-orbit="-Infinity 0deg 0.3m" max-camera-orbit="Infinity 180deg 1.2m" orbit-sensitivity="1.2" ${MV}>
+ <button slot="ar-button" class="ar">View on your table</button></model-viewer><div class="rot"><button id="rl" aria-label="Rotate left">⟲</button><button id="ra">Auto 360°</button><button id="rr" aria-label="Rotate right">⟳</button></div><p class="hint">Drag to rotate 360° · pinch to zoom</p></div>
+ <div class="info"><h2>${d.name}</h2><p>${d.desc}</p>
+ <div class="stats"><span>${d.portion}</span><span>${d.kcal} kcal</span><span>${d.time}</span></div>
+ <h4>SPICE LEVEL</h4><div class="spice">${[1,2,3].map(i=>`<i class="dot ${i<=d.spice?'on':''}"></i>`).join('')}<span style="margin-left:6px">${sp}</span></div>
+ <h4>WHAT'S IN IT</h4><ul>${d.ing.map(i=>`<li>${i}</li>`).join('')}</ul>
+ <h4>HOW IT'S MADE</h4><p style="margin:0">${d.prep}</p>
+ <h4>CONTAINS</h4><p style="margin:0">${d.allergens.join(', ')}</p>
+ <p class="note">Allergen and calorie details are examples. Confirm with restaurant staff before ordering.</p>
+ <p class="msg" id="armsg"></p><div class="acts" style="justify-content:center;margin-top:14px"><button class="ghost" id="qrb">Show dish QR</button><button class="ghost" onclick="scan()">Scan QR</button></div></div>`;
+ $('#qrb').onclick=()=>showQR(d);
+ const mv=$('#mv');mv.addEventListener('load',()=>{if(!mv.canActivateAR){mv.querySelector('.ar').style.display='none';$('#armsg').textContent='AR needs a supported phone (Android Chrome or iPhone Safari) on https. You can still rotate the 3D model.'}});
+ const turn=a=>{const o=mv.getCameraOrbit();mv.cameraOrbit=`${o.theta*180/Math.PI+a}deg ${o.phi*180/Math.PI}deg ${o.radius}m`};
+ $('#rl').onclick=()=>turn(-90);$('#rr').onclick=()=>turn(90);
+ const ra=$('#ra');ra.classList.add('on');ra.onclick=()=>{mv.autoRotate=!mv.autoRotate;ra.classList.toggle('on',mv.autoRotate)};
+ scrollTo(0,0);
+}
+function showQR(d){const q=$('#qr');q.innerHTML='';new QRCode(q,{text:link(d.id),width:200,height:200});$('#qrt').textContent=d.name;$('#qrurl').textContent=link(d.id);dlg.showModal()}
+let stream,raf;
+async function scan(){
+ sdlg.showModal();$('#smsg').textContent='Starting camera…';
+ try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  const v=$('#sv');v.srcObject=stream;await v.play();$('#smsg').textContent='Point the camera at a dish QR code';
+  const c=document.createElement('canvas'),x=c.getContext('2d',{willReadFrequently:true});
+  const tick=()=>{if(v.readyState>=2&&v.videoWidth){c.width=v.videoWidth;c.height=v.videoHeight;x.drawImage(v,0,0);
+   const r=jsQR(x.getImageData(0,0,c.width,c.height).data,c.width,c.height);if(r&&found(r.data))return}
+   raf=requestAnimationFrame(tick)};tick();
+ }catch(e){$('#smsg').textContent='Camera is blocked. Allow camera access in your browser settings. The page must be on https.'}
+}
+function stopScan(){cancelAnimationFrame(raf);stream&&stream.getTracks().forEach(t=>t.stop());stream=null;sdlg.close()}
+function found(t){const id=(t.split('#')[1]||'').trim();if(!DISHES.some(x=>x.id===id)){$('#smsg').textContent='That QR is not a dish from this menu.';return false}
+ stopScan();location.hash=id;return true}
+sdlg.addEventListener('close',()=>{stream&&stopScan()});
+function route(){const h=location.hash.slice(1),d=DISHES.find(x=>x.id===h);d?detail(d):menu()}
+addEventListener('hashchange',route);route();
+</script></body></html>
